@@ -1,41 +1,52 @@
 class Api::ProductsController < ApplicationController
-  # def all_products
-  #   @products = Product.all
-  #   render 'all_products.json.jbuilder'
-  # end
+before_action :authenticate_admin, only: [:create, :update, :destroy]
+def index
+    search_term = params[:search]
+    discount = params[:discount]
+    sort_attribute = params[:sort]
+    sort_order = params[:sort_order]
 
-  # def first_product
-  #   @product = Product.first
-  #   render 'first_product.json.jbuilder'
-  # end
-
-
-  # def second_product
-  #   @product = Product.find(2)
-  #   render 'second_product.json.jbuilder'
-  # end
-  
-  # def third_product
-  #   @product = Product.find(3)
-  #   render 'third_product.json.jbuilder'
-  # end
-
-  def index
     @products = Product.all
-    render 'index.json.jbuilder'
 
+    if search_term
+      @products = @products.where("name iLIKE ?", "%#{search_term}%")
+    end
+
+    if discount == "true"
+      @products = @products.where("price < ?", 45)
+    end
+
+    if sort_attribute && sort_order
+      @products = @products.order(sort_attribute => sort_order)
+    elsif sort_attribute
+      @products = @products.order(sort_attribute)
+    else
+      @products = @products.order(:id)
+    end
+
+    render 'index.json.jbuilder'
   end
 
   def create
-    @product = Product.new(
-                           name: params[:name],
-                           price: params[:image_url],
-                           image_url: params[:image_url],
-                           description: params[:description]
-                          )
+    if current_user.admin?
 
-  @product.save
-  render 'show.json.jbuilder'
+      @product = Product.new(
+                            name: params[:name],
+                            price: params[:price],
+                            description: params[:description],
+                            supplier_id: params[:supplier_id]
+                            )
+
+      
+      
+      if @product.save
+        render 'show.json.jbuilder'
+      else
+        render json: { errors: @product.errors.full_messages }, status: :unprocessable_entity
+      end
+    else
+      render json: {}, status: :unauthorized
+    end
   end
 
   def show
@@ -45,21 +56,22 @@ class Api::ProductsController < ApplicationController
 
   def update
     @product = Product.find(params[:id])
-
+    
     @product.name = params[:name] || @product.name
     @product.price = params[:price] || @product.price
-    @product.image_url = params[:image_url] || @product.image_url
     @product.description = params[:description] || @product.description
+    @product.image_url = params[:image_url] || @product.image_url
 
-    @product.save
-    render 'show.json.jbuilder'
+    if @product.save
+      render 'show.json.jbuilder'
+    else
+      render json: { message: @product.errors.full_messages }, status: :unprocessable_entity
+    end
   end
 
   def destroy
-    @product = Product.find(parmas[:id])
+    @product = Product.find(params[:id])
     @product.destroy
-
-    render json: {message:"You deleted the product!"}
+    render json: {message: "Successfully Destroyed Product"}
   end
-
 end

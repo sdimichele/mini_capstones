@@ -1,5 +1,6 @@
 json.partial! @product, partial: "product", as: :product
 
+
 # json.id @product.id
 # json.name @product.name
 # json.description @product.description
